@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <title>Admin Panel</title>
+</head>
+<body>
+    <h1>Admin Panel</h1>
+    <h2>Messages</h2>
+    <div id="chat-box"></div>
+    
+    <h2>Add New Product</h2>
+    <input type="text" id="product-name" placeholder="Product Name" />
+    <input type="number" id="product-price" placeholder="Price" />
+    <input type="text" id="product-description" placeholder="Description" />
+    <input type="text" id="product-category" placeholder="Category" />
+    <button id="add-product-button">Add Product</button>
+
+    <h2>Current Products</h2>
+    <div id="products-list"></div>
+
+    <script>
+        // WebSocket for chat
+        const ws = new WebSocket('ws://localhost:4001');
+        ws.onopen = () => {
+            console.log('Connected to chat');
+            ws.send('Hello from the admin!');
+        };
+        
+        ws.onmessage = (event) => {
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML += `<p>${event.data}</p>`;
+        };
+
+        // GraphQL mutation to add product
+        document.getElementById('add-product-button').onclick = () => {
+            const name = document.getElementById('product-name').value;
+            const price = document.getElementById('product-price').value;
+            const description = document.getElementById('product-description').value;
+            const category = document.getElementById('product-category').value;
+
+            fetch('http://localhost:4000/graphql', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: `
+                        mutation {
+                            addProduct(name: "${name}", price: ${price}, description: "${description}", category: "${category}") {
+                                id
+                                name
+                                price
+                                description
+                                category
+                            }
+                        }
+                    `,
+                }),
+            })
+            .then(res => res.json())
+            .then(data => {
+                const productsList = document.getElementById('products-list');
+                const newProduct = data.data.addProduct;
+                productsList.innerHTML += `<p>${newProduct.name} - $${newProduct.price}</p>`;
+            });
+        };
+
+        // Fetch products from GraphQL and display them
+        fetch('http://localhost:4000/graphql', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: '{ products { id name price description category } }' })
+        })
+        .then(res => res.json())
+        .then(data => {
+            const products = data.data.products;
+            const productsList = document.getElementById('products-list');
+            products.forEach(product => {
+                productsList.innerHTML += `<p>${product.name} - $${product.price}</p>`;
+            });
+        });
+    </script>
+</body>
+</html>
+    

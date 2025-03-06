@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <title>Client Chat</title>
+</head>
+<body>
+    <h1>Client Chat</h1>
+    <div id="chat-box"></div>
+    <input type="text" id="message-input" placeholder="Type a message..." />
+    <button id="send-button">Send</button>
+
+    <h2>Available Products</h2>
+    <div>
+        <p>Выберите, какие данные отображать:</p>
+        <input type="checkbox" id="show-name" checked> Название
+        <input type="checkbox" id="show-price"> Цена
+        <input type="checkbox" id="show-description"> Описание
+        <input type="checkbox" id="show-category"> Категория
+        <button id="get-products">Получить товары</button>
+    </div>
+    <div id="product-list"></div>
+
+    <script>
+        // WebSocket for chat
+        const ws = new WebSocket('ws://localhost:4001');
+        ws.onopen = () => {
+            console.log('Connected to chat');
+            ws.send('Hello from the client!');
+        };
+        
+        ws.onmessage = (event) => {
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML += `<p>${event.data}</p>`;
+        };
+        
+        document.getElementById('send-button').onclick = () => {
+            const message = document.getElementById('message-input').value;
+            ws.send(message);
+            document.getElementById('message-input').value = '';
+        };
+
+        // Fetch products from GraphQL and display them based on checkboxes
+        document.getElementById('get-products').onclick = () => {
+            const showName = document.getElementById('show-name').checked;
+            const showPrice = document.getElementById('show-price').checked;
+            const showDescription = document.getElementById('show-description').checked;
+            const showCategory = document.getElementById('show-category').checked;
+            
+            fetch('http://localhost:4000/graphql', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: '{ products { id name price description category } }' })
+            })
+            .then(res => res.json())
+            .then(data => {
+                const products = data.data.products;
+                const productList = document.getElementById('product-list');
+                productList.innerHTML = '';
+
+                products.forEach(product => {
+                    let productInfo = '';
+
+                    if (showName) productInfo += `<p>Name: ${product.name}</p>`;
+                    if (showPrice) productInfo += `<p>Price: $${product.price}</p>`;
+                    if (showDescription) productInfo += `<p>Description: ${product.description}</p>`;
+                    if (showCategory) productInfo += `<p>Category: ${product.category}</p>`;
+
+                    productList.innerHTML += productInfo;
+                });
+            });
+        };
+    </script>
+</body>
+</html>
