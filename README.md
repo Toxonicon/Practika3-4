@@ -1,3 +1,4 @@
+Что надо делать:
 1. cd Practika3-4/server
 2. npm install 
 3. node mainServer.js   
